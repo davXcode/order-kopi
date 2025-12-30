@@ -49,6 +49,21 @@ function sumRevenue(list) {
   return list.reduce((acc, o) => acc + Number(o.totalPrice || 0), 0);
 }
 
+// Support:
+// - URL penuh (Cloudinary): https://...
+// - path lama: /uploads/xxx.jpg
+function resolveProofUrl(paymentProofUrl) {
+  if (!paymentProofUrl) return '';
+  if (typeof paymentProofUrl !== 'string') return '';
+  const trimmed = paymentProofUrl.trim();
+  if (!trimmed) return '';
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    return trimmed;
+  }
+  // fallback untuk data lama (path relatif)
+  return `${API_BASE}${trimmed}`;
+}
+
 function exportOrdersToExcel({ filename, orders, meta }) {
   const ordersSheet = XLSX.utils.json_to_sheet(
     orders.map((o) => ({
@@ -512,71 +527,77 @@ export default function Admin() {
                 </thead>
 
                 <tbody>
-                  {rows.map((o) => (
-                    <tr key={o.id} style={{ borderTop: '1px solid #eee' }}>
-                      <td>{o.createdAtText}</td>
+                  {rows.map((o) => {
+                    const proofUrl = resolveProofUrl(o.paymentProofUrl);
 
-                      <td
-                        style={{
-                          fontFamily:
-                            'ui-monospace, SFMono-Regular, Menlo, monospace',
-                          fontSize: 12,
-                        }}
-                      >
-                        {o.id}
-                      </td>
+                    return (
+                      <tr key={o.id} style={{ borderTop: '1px solid #eee' }}>
+                        <td>{o.createdAtText}</td>
 
-                      <td>{o.customerName}</td>
-                      <td>{o.item}</td>
-                      <td align="right">{o.quantity}</td>
-                      <td align="right">
-                        Rp{o.unitPrice.toLocaleString('id-ID')}
-                      </td>
-                      <td align="right">
-                        Rp{o.totalPrice.toLocaleString('id-ID')}
-                      </td>
+                        <td
+                          style={{
+                            fontFamily:
+                              'ui-monospace, SFMono-Regular, Menlo, monospace',
+                            fontSize: 12,
+                          }}
+                        >
+                          {o.id}
+                        </td>
 
-                      <td align="center">
-                        <input
-                          type="checkbox"
-                          checked={!!o.paid}
-                          disabled={updatingId === o.id}
-                          onChange={(e) => onTogglePaid(o.id, e.target.checked)}
-                          title={o.paid ? 'Sudah dibayar' : 'Belum dibayar'}
-                        />
-                      </td>
+                        <td>{o.customerName}</td>
+                        <td>{o.item}</td>
+                        <td align="right">{o.quantity}</td>
+                        <td align="right">
+                          Rp{o.unitPrice.toLocaleString('id-ID')}
+                        </td>
+                        <td align="right">
+                          Rp{o.totalPrice.toLocaleString('id-ID')}
+                        </td>
 
-                      <td>
-                        {o.paymentProofUrl ? (
-                          <a
-                            href={`${API_BASE}${o.paymentProofUrl}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: 8,
-                            }}
-                          >
-                            <img
-                              src={`${API_BASE}${o.paymentProofUrl}`}
-                              alt="bukti"
+                        <td align="center">
+                          <input
+                            type="checkbox"
+                            checked={!!o.paid}
+                            disabled={updatingId === o.id}
+                            onChange={(e) =>
+                              onTogglePaid(o.id, e.target.checked)
+                            }
+                            title={o.paid ? 'Sudah dibayar' : 'Belum dibayar'}
+                          />
+                        </td>
+
+                        <td>
+                          {proofUrl ? (
+                            <a
+                              href={proofUrl}
+                              target="_blank"
+                              rel="noreferrer"
                               style={{
-                                width: 52,
-                                height: 52,
-                                objectFit: 'cover',
-                                borderRadius: 8,
-                                border: '1px solid #eee',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 8,
                               }}
-                            />
-                            <span>Lihat</span>
-                          </a>
-                        ) : (
-                          <span style={{ color: '#777' }}>-</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
+                            >
+                              <img
+                                src={proofUrl}
+                                alt="bukti"
+                                style={{
+                                  width: 52,
+                                  height: 52,
+                                  objectFit: 'cover',
+                                  borderRadius: 8,
+                                  border: '1px solid #eee',
+                                }}
+                              />
+                              <span>Lihat</span>
+                            </a>
+                          ) : (
+                            <span style={{ color: '#777' }}>-</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
 
                   {rows.length === 0 && (
                     <tr>

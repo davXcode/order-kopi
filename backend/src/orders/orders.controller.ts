@@ -17,22 +17,12 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
+import { memoryStorage } from 'multer';
 import type { FileFilterCallback } from 'multer';
-import { extname } from 'path';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { OrdersService } from './orders.service';
 import { UpdatePaidDto } from './update-paid.dto';
-
-// Type-safe filename generator (no any)
-function fileName(
-  _req: unknown,
-  file: Express.Multer.File,
-  cb: (error: Error | null, filename: string) => void,
-) {
-  const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-  cb(null, `${unique}${extname(file.originalname)}`);
-}
+import { CloudinaryService } from '../cloudinary/cloudinary.service';
 
 // Type-safe image filter
 function imageOnlyFilter(
@@ -46,7 +36,10 @@ function imageOnlyFilter(
 
 @Controller()
 export class OrdersController {
-  constructor(private readonly service: OrdersService) {}
+  constructor(
+    private readonly service: OrdersService,
+    private readonly cloudinary: CloudinaryService,
+  ) {}
 
   @Post('orders')
   create(@Body() dto: CreateOrderDto) {
@@ -67,10 +60,7 @@ export class OrdersController {
   @Post('orders/:id/proof')
   @UseInterceptors(
     FileInterceptor('file', {
-      storage: diskStorage({
-        destination: './uploads',
-        filename: fileName,
-      }),
+      storage: memoryStorage(),
       fileFilter: imageOnlyFilter,
       limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
     }),
@@ -79,12 +69,18 @@ export class OrdersController {
     @Param('id') id: string,
     @UploadedFile() file?: Express.Multer.File,
   ) {
-    if (!file)
+    if (!file) {
       throw new BadRequestException(
         'Upload bukti pembayaran wajib berupa gambar (jpg/png) max 5MB',
       );
+    }
 
-    const url = `/uploads/${file.filename}`;
+    const { url } = await this.cloudinary.uploadImageBuffer(file.buffer, {
+      folder: 'kopi-order/proofs',
+      publicId: `order-${id}-${Date.now()}`,
+    });
+
+    // simpan URL cloudinary ke order
     return this.service.attachProof(id, url);
   }
 
