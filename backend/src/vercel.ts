@@ -10,9 +10,9 @@ import { ExpressAdapter } from '@nestjs/platform-express';
 import express from 'express';
 import { AppModule } from './app.module';
 
-let cached: any;
+let cachedServer: any;
 
-async function createApp() {
+async function createServer() {
   const server = express();
   const app = await NestFactory.create(AppModule, new ExpressAdapter(server));
 
@@ -22,12 +22,12 @@ async function createApp() {
   });
 
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
-
   await app.init();
+
   return server;
 }
 
 export default async function handler(req: any, res: any) {
-  if (!cached) cached = await createApp();
-  return cached(req, res);
+  if (!cachedServer) cachedServer = await createServer();
+  return cachedServer(req, res);
 }
