@@ -57,9 +57,11 @@ function resolveProofUrl(paymentProofUrl) {
   if (typeof paymentProofUrl !== 'string') return '';
   const trimmed = paymentProofUrl.trim();
   if (!trimmed) return '';
+
   if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
     return trimmed;
   }
+
   // fallback untuk data lama (path relatif)
   return `${API_BASE}${trimmed}`;
 }
@@ -75,7 +77,7 @@ function exportOrdersToExcel({ filename, orders, meta }) {
       unitPrice: o.unitPrice,
       totalPrice: o.totalPrice,
       paid: o.paid ? 'PAID' : 'UNPAID',
-      paymentProofUrl: o.paymentProofUrl || '',
+      paymentProofUrl: resolveProofUrl(o.paymentProofUrl) || '',
     }))
   );
 
@@ -154,7 +156,7 @@ export default function Admin() {
       setCloseFrom(store.closeFrom ?? '');
       setOpenUntil(store.openUntil ?? '');
     } catch (e) {
-      setError(e.message);
+      setError(e?.message || 'Gagal load data');
     }
   }
 
@@ -167,6 +169,7 @@ export default function Admin() {
     return orders.map((o) => ({
       ...o,
       createdAtText: new Date(o.createdAt).toLocaleString('id-ID'),
+      proofUrl: resolveProofUrl(o.paymentProofUrl),
     }));
   }, [orders]);
 
@@ -177,7 +180,7 @@ export default function Admin() {
       await setPaid(orderId, nextPaid);
       await load();
     } catch (e) {
-      setError(e.message);
+      setError(e?.message || 'Gagal update paid');
     } finally {
       setUpdatingId(null);
     }
@@ -190,7 +193,7 @@ export default function Admin() {
       await setStoreOpen(nextOpen, closeFrom || null, openUntil || null);
       await load();
     } catch (e) {
-      setError(e.message);
+      setError(e?.message || 'Gagal update status toko');
       await load();
     }
   }
@@ -202,7 +205,7 @@ export default function Admin() {
       await setStoreOpen(storeOpen, nextDate || null, openUntil || null);
       await load();
     } catch (e) {
-      setError(e.message);
+      setError(e?.message || 'Gagal update tanggal tutup');
       await load();
     }
   }
@@ -214,7 +217,7 @@ export default function Admin() {
       await setStoreOpen(storeOpen, closeFrom || null, nextDate || null);
       await load();
     } catch (e) {
-      setError(e.message);
+      setError(e?.message || 'Gagal update tanggal buka');
       await load();
     }
   }
@@ -253,7 +256,7 @@ export default function Admin() {
         },
       });
     } catch (e) {
-      setError(e.message);
+      setError(e?.message || 'Gagal export semua order');
     }
   }
 
@@ -527,77 +530,75 @@ export default function Admin() {
                 </thead>
 
                 <tbody>
-                  {rows.map((o) => {
-                    const proofUrl = resolveProofUrl(o.paymentProofUrl);
+                  {rows.map((o) => (
+                    <tr key={o.id} style={{ borderTop: '1px solid #eee' }}>
+                      <td>{o.createdAtText}</td>
 
-                    return (
-                      <tr key={o.id} style={{ borderTop: '1px solid #eee' }}>
-                        <td>{o.createdAtText}</td>
+                      <td
+                        style={{
+                          fontFamily:
+                            'ui-monospace, SFMono-Regular, Menlo, monospace',
+                          fontSize: 12,
+                        }}
+                      >
+                        {o.id}
+                      </td>
 
-                        <td
-                          style={{
-                            fontFamily:
-                              'ui-monospace, SFMono-Regular, Menlo, monospace',
-                            fontSize: 12,
-                          }}
-                        >
-                          {o.id}
-                        </td>
+                      <td>{o.customerName}</td>
+                      <td>{o.item}</td>
+                      <td align="right">{o.quantity}</td>
+                      <td align="right">
+                        Rp{o.unitPrice.toLocaleString('id-ID')}
+                      </td>
+                      <td align="right">
+                        Rp{o.totalPrice.toLocaleString('id-ID')}
+                      </td>
 
-                        <td>{o.customerName}</td>
-                        <td>{o.item}</td>
-                        <td align="right">{o.quantity}</td>
-                        <td align="right">
-                          Rp{o.unitPrice.toLocaleString('id-ID')}
-                        </td>
-                        <td align="right">
-                          Rp{o.totalPrice.toLocaleString('id-ID')}
-                        </td>
+                      <td align="center">
+                        <input
+                          type="checkbox"
+                          checked={!!o.paid}
+                          disabled={updatingId === o.id}
+                          onChange={(e) => onTogglePaid(o.id, e.target.checked)}
+                          title={o.paid ? 'Sudah dibayar' : 'Belum dibayar'}
+                        />
+                      </td>
 
-                        <td align="center">
-                          <input
-                            type="checkbox"
-                            checked={!!o.paid}
-                            disabled={updatingId === o.id}
-                            onChange={(e) =>
-                              onTogglePaid(o.id, e.target.checked)
-                            }
-                            title={o.paid ? 'Sudah dibayar' : 'Belum dibayar'}
-                          />
-                        </td>
-
-                        <td>
-                          {proofUrl ? (
-                            <a
-                              href={proofUrl}
-                              target="_blank"
-                              rel="noreferrer"
+                      <td>
+                        {o.proofUrl ? (
+                          <a
+                            href={o.proofUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 8,
+                            }}
+                          >
+                            <img
+                              src={o.proofUrl}
+                              alt="bukti"
                               style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: 8,
+                                width: 52,
+                                height: 52,
+                                objectFit: 'cover',
+                                borderRadius: 8,
+                                border: '1px solid #eee',
                               }}
-                            >
-                              <img
-                                src={proofUrl}
-                                alt="bukti"
-                                style={{
-                                  width: 52,
-                                  height: 52,
-                                  objectFit: 'cover',
-                                  borderRadius: 8,
-                                  border: '1px solid #eee',
-                                }}
-                              />
-                              <span>Lihat</span>
-                            </a>
-                          ) : (
-                            <span style={{ color: '#777' }}>-</span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
+                              onError={(e) => {
+                                // fallback kalau image broken (optional)
+                                e.currentTarget.style.display = 'none';
+                              }}
+                            />
+                            <span>Lihat</span>
+                          </a>
+                        ) : (
+                          <span style={{ color: '#777' }}>-</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
 
                   {rows.length === 0 && (
                     <tr>
