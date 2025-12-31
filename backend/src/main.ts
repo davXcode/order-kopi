@@ -1,16 +1,19 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import { ExpressAdapter } from '@nestjs/platform-express';
+import express from 'express';
 
-async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+export async function createApp() {
+  const server = express();
 
-  app.enableCors({
-    origin: ['http://localhost:5173', 'https://order-kopi.vercel.app'],
-    credentials: true,
+  const app = await NestFactory.create(AppModule, new ExpressAdapter(server), {
+    bufferLogs: true,
   });
 
-  // serve uploaded files
+  app.enableCors({
+    origin: '*',
+  });
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -19,6 +22,6 @@ async function bootstrap() {
     }),
   );
 
-  await app.listen(3000);
+  await app.init();
+  return server;
 }
-bootstrap();
