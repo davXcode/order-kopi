@@ -1,38 +1,26 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
-/* eslint-disable @typescript-eslint/no-unsafe-return */
-
 import 'reflect-metadata';
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { ExpressAdapter } from '@nestjs/platform-express';
 import express from 'express';
-// import { AppModule } from 'src/app.module';
-import { AppModule } from '../dist/app.module';
-
-// import { AppModule } from '../../dist/app.module'; // ⬅️ FIX PATH
-// import { AppModule } from '../../dist/app.module'; // ⬅️ FIX PATH
+import { AppModule } from '../src/app.module';
 
 let cachedServer: any;
 
-async function createServer() {
+async function bootstrap() {
   const server = express();
 
-  const app = await NestFactory.create(AppModule, new ExpressAdapter(server));
+  const app = await NestFactory.create(AppModule, new ExpressAdapter(server), {
+    bufferLogs: true,
+  });
 
   app.enableCors({
-    origin: ['https://order-kopi.vercel.app', 'http://localhost:5173'],
+    origin: ['http://localhost:5173', 'https://order-kopi.vercel.app'],
     credentials: true,
   });
 
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      transform: true,
-    }),
-  );
+  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
 
   await app.init();
   return server;
@@ -40,7 +28,8 @@ async function createServer() {
 
 export default async function handler(req: any, res: any) {
   if (!cachedServer) {
-    cachedServer = await createServer();
+    cachedServer = await bootstrap();
   }
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-return
   return cachedServer(req, res);
 }
