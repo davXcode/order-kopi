@@ -1,10 +1,19 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+
+import 'reflect-metadata';
+import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { ExpressAdapter } from '@nestjs/platform-express';
 import express from 'express';
-import { AppModule } from '../src/app.module';
+import { AppModule } from 'src/app.module';
+// import { AppModule } from '../../dist/app.module'; // ⬅️ FIX PATH
+// import { AppModule } from '../../dist/app.module'; // ⬅️ FIX PATH
 
-let cachedServer: express.Express | null = null;
+let cachedServer: any;
 
 async function createServer() {
   const server = express();
@@ -12,22 +21,24 @@ async function createServer() {
   const app = await NestFactory.create(AppModule, new ExpressAdapter(server));
 
   app.enableCors({
-    origin: true, // boleh semua dulu; kalau mau strict, isi domain frontend kamu
+    origin: ['https://order-kopi.vercel.app', 'http://localhost:5173'],
     credentials: true,
   });
+
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      transform: true,
+    }),
+  );
 
   await app.init();
   return server;
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  try {
-    if (!cachedServer) cachedServer = await createServer();
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-    return cachedServer(req as any, res as any);
-  } catch (err) {
-    console.error(err);
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-    return res.status(500).json({ message: 'Server error' });
+export default async function handler(req: any, res: any) {
+  if (!cachedServer) {
+    cachedServer = await createServer();
   }
+  return cachedServer(req, res);
 }

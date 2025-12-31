@@ -7,13 +7,9 @@ import express from 'express';
 export async function createApp() {
   const server = express();
 
-  const app = await NestFactory.create(AppModule, new ExpressAdapter(server), {
-    bufferLogs: true,
-  });
+  const app = await NestFactory.create(AppModule, new ExpressAdapter(server));
 
-  app.enableCors({
-    origin: '*',
-  });
+  app.enableCors({ origin: '*' });
 
   app.useGlobalPipes(
     new ValidationPipe({
