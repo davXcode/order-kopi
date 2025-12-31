@@ -56,8 +56,18 @@ export class OrdersController {
     @Query('paid') paid?: 'all' | 'paid' | 'unpaid',
     @Query('date') date?: string,
   ) {
+    console.log('ORDERS HIT');
     return this.service.findAll(sort ?? 'desc', paid ?? 'all', date);
   }
+
+  // @Get('orders')
+  // findAll(
+  //   @Query('sort') sort?: 'asc' | 'desc',
+  //   @Query('paid') paid?: 'all' | 'paid' | 'unpaid',
+  //   @Query('date') date?: string,
+  // ) {
+  //   return this.service.findAll(sort ?? 'desc', paid ?? 'all', date);
+  // }
 
   // Upload bukti pembayaran (Cloudinary)
   @Post('orders/:id/proof')
