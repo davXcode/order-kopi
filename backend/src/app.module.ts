@@ -21,13 +21,13 @@ import { SettingsModule } from './settings/settings.module';
     //       ? { rejectUnauthorized: false }
     //       : undefined,
     // }),
-    TypeOrmModule.forRoot({
-      type: 'postgres',
-      url: process.env.DATABASE_URL,
-      ssl: { rejectUnauthorized: false },
-      autoLoadEntities: true,
-      synchronize: true, // aman untuk project kecil
-    }),
+    // TypeOrmModule.forRoot({
+    //   type: 'postgres',
+    //   url: process.env.DATABASE_URL,
+    //   ssl: { rejectUnauthorized: false },
+    //   autoLoadEntities: true,
+    //   synchronize: true, // aman untuk project kecil
+    // }),
     // TypeOrmModule.forRoot({
     //   type: 'postgres',
     //   url: process.env.DATABASE_URL,
@@ -41,6 +41,17 @@ import { SettingsModule } from './settings/settings.module';
     //       ? { max: 1 } // penting di serverless biar gak meledak koneksi
     //       : undefined,
     // }),
+    TypeOrmModule.forRoot({
+      type: 'postgres',
+      url: process.env.DATABASE_URL,
+      autoLoadEntities: true,
+      synchronize: true, // oke untuk project kecil (kalau production serius -> migrations)
+      ssl: { rejectUnauthorized: false },
+      extra: {
+        max: 1, // PENTING untuk serverless + pgbouncer
+      },
+    }),
+
     OrdersModule,
     SettingsModule,
   ],
