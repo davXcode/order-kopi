@@ -27,13 +27,16 @@ export class Order {
   @Column({ type: 'integer' })
   totalPrice: number;
 
-  // NEW
   @Column({ type: 'boolean', default: false })
   paid: boolean;
 
-  // NEW: simpan URL/path bukti pembayaran
+  // simpan URL bukti pembayaran (Cloudinary secure_url)
   @Column({ type: 'text', nullable: true })
   paymentProofUrl: string | null;
+
+  // simpan Cloudinary public_id (buat delete/replace)
+  @Column({ type: 'text', nullable: true })
+  paymentProofPublicId: string | null;
 
   @CreateDateColumn()
   createdAt: Date;

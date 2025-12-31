@@ -46,7 +46,7 @@ export class OrdersController {
     return this.service.create(dto);
   }
 
-  // GET /orders?sort=asc|desc&paid=all|paid|unpaid
+  // GET /orders?sort=asc|desc&paid=all|paid|unpaid&date=YYYY-MM-DD
   @Get('orders')
   findAll(
     @Query('sort') sort?: 'asc' | 'desc',
@@ -69,19 +69,24 @@ export class OrdersController {
     @Param('id') id: string,
     @UploadedFile() file?: Express.Multer.File,
   ) {
-    if (!file) {
+    if (!file || !file.buffer) {
       throw new BadRequestException(
         'Upload bukti pembayaran wajib berupa gambar (jpg/png) max 5MB',
       );
     }
 
-    const { url } = await this.cloudinary.uploadImageBuffer(file.buffer, {
+    // Upload ke Cloudinary
+    const uploaded = await this.cloudinary.uploadImageBuffer(file.buffer, {
       folder: 'kopi-order/proofs',
+      // biar enak tracking & unique
       publicId: `order-${id}-${Date.now()}`,
     });
 
-    // simpan URL cloudinary ke order
-    return this.service.attachProof(id, url);
+    // Simpan ke DB (url + publicId kalau kamu simpan fieldnya)
+    // Kalau entity kamu belum punya paymentProofPublicId, cukup kirim url saja.
+    return this.service.attachProof(id, uploaded.secureUrl);
+
+    // return this.service.attachProof(id, uploaded.secureUrl, uploaded.publicId);
   }
 
   // Admin toggle paid

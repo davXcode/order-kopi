@@ -35,6 +35,8 @@ export class OrdersService {
       totalPrice,
       paid: false,
       paymentProofUrl: null,
+      // kalau kamu nanti tambah kolom ini, aman:
+      // paymentProofPublicId: null,
     });
 
     return this.repo.save(order);
@@ -51,6 +53,8 @@ export class OrdersService {
     if (paid === 'paid') qb.andWhere('o.paid = :paid', { paid: true });
     if (paid === 'unpaid') qb.andWhere('o.paid = :paid', { paid: false });
 
+    // NOTE: untuk Postgres nanti sebaiknya pakai DATE(o.createdAt) atau CAST.
+    // Ini masih jalan di SQLite, dan umumnya juga aman di PG dengan CAST, tapi nanti bisa kita rapihin.
     if (date) {
       qb.andWhere('DATE(o.createdAt) = DATE(:date)', { date });
     }
@@ -68,14 +72,36 @@ export class OrdersService {
     return this.repo.save(order);
   }
 
+  /**
+   * Simpan bukti pembayaran.
+   * - paymentProofUrl: secure_url dari Cloudinary
+   * - paymentProofPublicId: public_id dari Cloudinary (opsional, buat delete/replace)
+   */
   async attachProof(id: string, paymentProofUrl: string) {
     const order = await this.repo.findOne({ where: { id } });
     if (!order) throw new NotFoundException('Order tidak ditemukan');
 
     order.paymentProofUrl = paymentProofUrl;
-    // opsional: auto set paid? biasanya jangan auto, biar admin verifikasi
     return this.repo.save(order);
   }
+
+  // async attachProof(
+  //   id: string,
+  //   paymentProofUrl: string,
+  //   paymentProofPublicId?: string,
+  // ) {
+  //   const order = await this.repo.findOne({ where: { id } });
+  //   if (!order) throw new NotFoundException('Order tidak ditemukan');
+
+  //   order.paymentProofUrl = paymentProofUrl;
+
+  //   // Kalau entity kamu BELUM punya kolom ini, biarin comment.
+  //   // Kalau sudah kamu tambah, tinggal uncomment.
+  //   // (order as any).paymentProofPublicId = paymentProofPublicId ?? null;
+
+  //   // opsional: jangan auto paid, biar admin verifikasi manual
+  //   return this.repo.save(order);
+  // }
 
   async stats() {
     const totalOrders = await this.repo.count();
@@ -83,7 +109,7 @@ export class OrdersService {
     const result = await this.repo
       .createQueryBuilder('o')
       .select('COALESCE(SUM(o.totalPrice), 0)', 'sum')
-      .getRawOne<{ sum: number }>();
+      .getRawOne<{ sum: string | number }>();
 
     return {
       totalOrders,
