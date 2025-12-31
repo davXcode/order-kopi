@@ -45,10 +45,18 @@ import { SettingsModule } from './settings/settings.module';
       type: 'postgres',
       url: process.env.DATABASE_URL,
       autoLoadEntities: true,
-      synchronize: true, // oke untuk project kecil (kalau production serius -> migrations)
+      synchronize: true,
+
+      // Penting untuk Supabase (SSL)
       ssl: { rejectUnauthorized: false },
+
+      // Penting untuk pastiin pg driver bener-bener pakai SSL option di atas
       extra: {
-        max: 1, // PENTING untuk serverless + pgbouncer
+        ssl: { rejectUnauthorized: false },
+
+        // Jika kamu pakai PgBouncer (pooler), ini membantu di serverless
+        // (opsional tapi disarankan)
+        max: 1,
       },
     }),
 
