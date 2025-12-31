@@ -24,13 +24,15 @@ import { OrdersService } from './orders.service';
 import { UpdatePaidDto } from './update-paid.dto';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
 
-// Type-safe image filter
+// Image-only filter
 function imageOnlyFilter(
   _req: unknown,
   file: Express.Multer.File,
   cb: FileFilterCallback,
 ) {
-  if (!file.mimetype.startsWith('image/')) return cb(null, false);
+  if (!file.mimetype.startsWith('image/')) {
+    return cb(null, false);
+  }
   cb(null, true);
 }
 
@@ -41,6 +43,7 @@ export class OrdersController {
     private readonly cloudinary: CloudinaryService,
   ) {}
 
+  // Create order
   @Post('orders')
   create(@Body() dto: CreateOrderDto) {
     return this.service.create(dto);
@@ -56,7 +59,7 @@ export class OrdersController {
     return this.service.findAll(sort ?? 'desc', paid ?? 'all', date);
   }
 
-  // Upload proof: multipart/form-data field = "file"
+  // Upload bukti pembayaran (Cloudinary)
   @Post('orders/:id/proof')
   @UseInterceptors(
     FileInterceptor('file', {
@@ -78,15 +81,12 @@ export class OrdersController {
     // Upload ke Cloudinary
     const uploaded = await this.cloudinary.uploadImageBuffer(file.buffer, {
       folder: 'kopi-order/proofs',
-      // biar enak tracking & unique
       publicId: `order-${id}-${Date.now()}`,
     });
 
-    // Simpan ke DB (url + publicId kalau kamu simpan fieldnya)
-    // Kalau entity kamu belum punya paymentProofPublicId, cukup kirim url saja.
+    // Simpan URL Cloudinary ke database
+    // return this.service.attachProof(id, uploaded.url);
     return this.service.attachProof(id, uploaded.secureUrl);
-
-    // return this.service.attachProof(id, uploaded.secureUrl, uploaded.publicId);
   }
 
   // Admin toggle paid
@@ -95,7 +95,7 @@ export class OrdersController {
     return this.service.updatePaid(id, dto.paid);
   }
 
-  // stats (route rahasia)
+  // Statistik (admin)
   @Get('dav-order/stats')
   stats() {
     return this.service.stats();

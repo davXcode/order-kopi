@@ -11,14 +11,27 @@ import { Setting } from './settings/setting.entity';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    // TypeOrmModule.forRoot({
+    //   type: 'postgres',
+    //   url: process.env.DATABASE_URL,
+    //   entities: [Order, Setting],
+    //   synchronize: true, // dev only
+    //   ssl:
+    //     process.env.NODE_ENV === 'production'
+    //       ? { rejectUnauthorized: false }
+    //       : undefined,
+    // }),
     TypeOrmModule.forRoot({
       type: 'postgres',
       url: process.env.DATABASE_URL,
+      autoLoadEntities: true,
       entities: [Order, Setting],
-      synchronize: true, // dev only
+      synchronize: true, // kalau production serius, mending pakai migrations
       ssl:
-        process.env.NODE_ENV === 'production'
-          ? { rejectUnauthorized: false }
+        process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
+      extra:
+        process.env.DB_PGBOUNCER === 'true'
+          ? { max: 1 } // penting di serverless biar gak meledak koneksi
           : undefined,
     }),
     OrdersModule,
